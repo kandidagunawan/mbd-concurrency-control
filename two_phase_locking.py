@@ -96,9 +96,9 @@ class Schedule:
         print(f"Transanction {operation_transaction} is added to pending transaction queue")
         self.pending_transaction.add(operation_transaction)
         print(f"All pending transaction : {self.pending_transaction}")
-    def remove_pending_transaction(self, operation_transaction):
-        print(f"{operation_transaction} is removed from queue")
-        self.pending_transaction.remove(operation_transaction)
+    def remove_pending_transaction(self, transaction_number):
+        print(f"Transaction {transaction_number} is removed from pending queue")
+        self.pending_transaction.remove(transaction_number)
         print(f"All pending transaction : {self.pending_transaction}")
     def run(self):
         for s in self.schedule_list:
@@ -137,9 +137,10 @@ class Schedule:
             else:
                 print(f"Transaction {transaction_number} commit")
                 transaction.unlock_all_resources()
-                for p in self.pending_transaction:
+                for p in list(self.pending_transaction):
+                    not_pending = True
                     t = self.get_transaction(transaction_number=p)
-                    for o in t.operation_queue:
+                    for o in list(t.operation_queue):
                         transaction_number = self.get_transaction_number(o)
                         operation = self.get_operation(o)
                         if(o[0] == 'C'):
@@ -160,6 +161,8 @@ class Schedule:
                                 print(f"Transaction {transaction_number} read {resource}")
                                 t.operation_queue.pop(0)
                             else:
+                                print('You still dont have access to that resource')
+                                not_pending = False
                                 break
                                 # self.add_pending_transaction(transaction_number)
                                 # transaction.add_operation_queue(s)
@@ -171,18 +174,17 @@ class Schedule:
                                 transaction.add_exclusive_lock(resource = resource)
                                 print(f"Transaction {transaction_number} write {resource}")
                                 t.operation_queue.pop(0)
-                                print(t.operation_queue)
-                                print('ok')
                             else:
                                 # self.add_pending_transaction(transaction_number)
                                 # transaction.add_operation_queue(s)
-
-                                print('test')
+                                print('You still dont have access to that resource')
+                                not_pending = False
                                 break
                         else:
-                            print('flag')
                             print(f"Transaction {transaction_number} commit")
                             transaction.unlock_all_resources()
+                    if(not_pending):
+                        self.remove_pending_transaction(p)
                             
 
             print("\n")
