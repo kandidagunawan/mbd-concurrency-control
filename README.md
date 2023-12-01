@@ -12,10 +12,14 @@ This is a project for the course "Database Management" at Bandung Institute of T
 ### Two-Phase Locking Protocol
 
 1. Clone this repository
-2. Run the following command
+2. Run the following command to run `Two-Phase Locking Protocol`
 
    ```
    python two_phase_locking.py
+   ```
+   or run the following command to run `Optimistic Concurrency Control Protocol`
+   ```
+   python occ.py
    ```
 
 3. Enter the schedule you want to process with this format:
@@ -32,7 +36,5 @@ This is a project for the course "Database Management" at Bandung Institute of T
    C: Commit
    There's no input validation, so you have to follow this format!
    
-
-### OCC
 
 
