@@ -39,6 +39,8 @@ class Schedule:
         self.transaction_set = set()
         self.transaction_number_set = set()
         self.pending_transaction = set()
+        self.operation_queue = []
+        self.previous_operation_queue = []
         for s in schedule_list:
             if(s[0] == 'R' or s[0] == 'W'):
                 if(s.split("(")[0][1:] not in self.transaction_number_set):
@@ -87,11 +89,17 @@ class Schedule:
         return 'shared'
             
     def get_transaction_number(self, operation_transaction):
-        return operation_transaction[1:].split("(")[0]
+        if(operation_transaction[0] == 'R' or operation_transaction[0] == 'W'):
+            return operation_transaction[1:].split("(")[0]
+        else:
+            return operation_transaction[1:]
     def get_operation(self, operation_transaction):
         return operation_transaction[0]
     def get_resource(self, operation_transaction):
-        return operation_transaction.split("(")[1].split(")")[0]
+        if(operation_transaction[0] == 'R' or operation_transaction[0] == 'W'):
+            return operation_transaction.split("(")[1].split(")")[0]
+        else:
+            return ""
     def add_pending_transaction(self, operation_transaction):
         print(f"Transanction {operation_transaction} is added to pending transaction queue")
         self.pending_transaction.add(operation_transaction)
@@ -106,8 +114,6 @@ class Schedule:
             operation = self.get_operation(s)
             if(operation == 'R' or operation == 'W'):
                 resource = self.get_resource(s)
-                # print("resource ni bos")
-                # print(resource)
             transaction = self.get_transaction(transaction_number= transaction_number)
             if(self.get_operation(s) == 'R' and transaction_number not in self.pending_transaction):
                 if(self.is_acquired_by_transaction_number(resource=resource, access= 'shared', transaction_number=transaction_number) or self.is_acquired_by_transaction_number(resource=resource, access= 'exclusive', transaction_number=transaction_number)):
@@ -121,7 +127,9 @@ class Schedule:
                     print(f"Transaction {transaction_number} read {resource}")
                 else:
                     self.add_pending_transaction(transaction_number)
+                    self.previous_operation_queue = self.operation_queue
                     transaction.add_operation_queue(s)
+                    self.operation_queue.append(s)
             elif(self.get_operation(s) == 'W' and transaction_number not in self.pending_transaction):
                 if(self.is_acquired_by_transaction_number(resource=resource, access= 'exclusive', transaction_number=transaction_number)):
                     print(f"Transaction {transaction_number} write {resource}")
@@ -131,9 +139,13 @@ class Schedule:
                 else:
                     self.add_pending_transaction(transaction_number)
                     transaction.add_operation_queue(s)
+                    self.previous_operation_queue = self.operation_queue
+                    self.operation_queue.append(s)
             elif(transaction_number in self.pending_transaction):
                     # self.add_pending_transaction(transaction_number)
                     transaction.add_operation_queue(s)
+                    self.previous_operation_queue = self.operation_queue
+                    self.operation_queue.append(s)
             else:
                 print(f"Transaction {transaction_number} commit")
                 transaction.unlock_all_resources()
@@ -152,6 +164,8 @@ class Schedule:
                             if(self.is_acquired_by_transaction_number(resource=resource, access= 'shared', transaction_number=transaction_number) or self.is_acquired_by_transaction_number(resource=resource, access= 'exclusive', transaction_number=transaction_number)):
                                 print(f"Transaction {transaction_number} read {resource}")
                                 t.operation_queue.pop(0)
+                                self.previous_operation_queue = self.operation_queue
+                                self.operation_queue.remove(o)
                             elif(self.is_resource_free(resource= resource, transaction_number=transaction_number) or self.is_resource_only_shared_locked(resource=resource)):
                                 access_type = self.get_access_type(resource=resource, transaction_number=transaction_number)
                                 if(access_type == 'shared'):
@@ -160,8 +174,11 @@ class Schedule:
                                     transaction.add_exclusive_lock(resource = resource)
                                 print(f"Transaction {transaction_number} read {resource}")
                                 t.operation_queue.pop(0)
+                                self.previous_operation_queue = self.operation_queue
+                                self.operation_queue.remove(o)
                             else:
                                 print('You still dont have access to that resource')
+                                self.previous_operation_queue = self.operation_queue
                                 not_pending = False
                                 break
                                 # self.add_pending_transaction(transaction_number)
@@ -170,60 +187,41 @@ class Schedule:
                             if(self.is_acquired_by_transaction_number(resource=resource, access= 'exclusive', transaction_number=transaction_number)):
                                 print(f"Transaction {transaction_number} write {resource}")
                                 t.operation_queue.pop(0)
+                                self.previous_operation_queue = self.operation_queue
+                                self.operation_queue.remove(o)
                             elif(self.is_resource_free(resource= resource, transaction_number=transaction_number)):
                                 transaction.add_exclusive_lock(resource = resource)
                                 print(f"Transaction {transaction_number} write {resource}")
                                 t.operation_queue.pop(0)
+                                self.previous_operation_queue = self.operation_queue
+                                self.operation_queue.remove(o)
                             else:
                                 # self.add_pending_transaction(transaction_number)
                                 # transaction.add_operation_queue(s)
+
                                 print('You still dont have access to that resource')
+                                self.previous_operation_queue = self.operation_queue
                                 not_pending = False
                                 break
                         else:
                             print(f"Transaction {transaction_number} commit")
                             transaction.unlock_all_resources()
+                            self.previous_operation_queue = self.operation_queue
+                            self.operation_queue.remove(o)
                     if(not_pending):
                         self.remove_pending_transaction(p)
                             
 
             print("\n")
+        while(len(self.operation_queue) > 0):
+            if(self.previous_operation_queue == self.operation_queue):
+                print("Deadlock detected!")
+                break
 
 user_input = input("Enter schedule_list: ")
 schedule_list = user_input.replace(" ", "").split(";")
 schedule = Schedule(schedule_list=schedule_list)
 schedule.run()
-# test = "R11(X)"
-# print(test[1:].split("(")[0])
-
-
-
-
-                    
-
-
-
-
-
-                        
-
-                    
-
-
-
-
-
-
-    # def run(self):
-    #     for 
-    
-            
-
-
-
-    # def run(self):
-    #     for operation in self.schedule_list:
-
 
 
 
