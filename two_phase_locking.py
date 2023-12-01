@@ -36,7 +36,6 @@ class Transaction:
         self.shared_lock = []
         return all_unlock
 
-        
     def is_resource_shared_locked(self, resource):
         for r in self.shared_lock:
             if r == resource:
@@ -70,19 +69,16 @@ class Schedule:
             temp_S = "Lock-S" + str(transaction_number)  + "(" + self.get_resource(operation_transaction) + ")"
             self.pending_transaction = set()
             if(operation_transaction[0] != 'C' and operation_transaction[0] != "L" and self.get_transaction_number(operation_transaction) == transaction_number):
-                print("masuk1")
                 t_list.append(operation_transaction)
                 self.final_schedule.remove(operation_transaction)
             elif(self.get_transaction_number(operation_transaction) == transaction_number):
-                print("masuk2")
                 self.final_schedule.remove(operation_transaction)
             # elif(operation_transaction[0] == "L" and (operation_transaction.split("(")):
             #     self.final_schedule.remove(operation_transaction)
             elif(operation_transaction== temp_X or operation_transaction == temp_S):
-                print("masuk3")
                 self.final_schedule.remove(operation_transaction)
             
-            
+        
         self.get_transaction(transaction_number=transaction_number).rollback_transaction()
         self.schedule_list = self.operation_queue
         self.operation_queue = []
@@ -92,7 +88,6 @@ class Schedule:
         self.previous_operation_queue = self.operation_queue
 
         temp = self.operation_queue
-        # self.operation_queue.insert(0, t_list)
        
             
     def get_transaction(self, transaction_number):
@@ -104,7 +99,7 @@ class Schedule:
         for transaction in self.transaction_set:
             if(transaction.is_resource_shared_locked(resource = resource) or transaction.is_resource_exclusive_locked(resource = resource) and transaction.transaction_number != transaction_number):
                 avail = False
-                break
+                return avail
         return avail
     def is_resource_only_shared_locked(self, resource):
         avail = True
@@ -112,6 +107,9 @@ class Schedule:
             if(transaction.is_resource_exclusive_locked(resource = resource)):
                 avail = False
                 break
+            elif(transaction.is_resource_shared_locked(resource = resource)):
+                continue
+
         return avail
 
     def is_acquired_by_transaction_number(self, resource, access, transaction_number):
@@ -162,7 +160,7 @@ class Schedule:
                     print(f"Transaction {transaction_number} read {resource}")
                     t_string = "R" + transaction_number + "(" + resource + ")"
                     self.final_schedule.append(t_string)
-                elif(self.is_resource_free(resource= resource, transaction_number=transaction_number) or self.is_resource_only_shared_locked(resource=resource)):
+                elif(self.is_resource_free(resource= resource, transaction_number=transaction_number)):
                     access_type = self.get_access_type(resource=resource, transaction_number=transaction_number)
                     if(access_type == 'shared'):
                         transaction.add_shared_lock(resource = resource)
@@ -172,10 +170,23 @@ class Schedule:
                         transaction.add_exclusive_lock(resource = resource)
                         t_string = "Lock-X" + transaction_number + "(" + resource + ")"
                         self.final_schedule.append(t_string)
-
                     print(f"Transaction {transaction_number} read {resource}")
                     t_string = "R" + transaction_number + "(" + resource + ")"
                     self.final_schedule.append(t_string)
+                elif(self.is_resource_only_shared_locked(resource=resource) and self.get_access_type(resource=resource, transaction_number=transaction_number) == 'exclusive'):
+                    print(f"Transaction {transaction_number} Cant get exclusive lock on {resource}")
+                    self.previous_operation_queue = self.operation_queue
+                    not_pending = False
+                elif(self.is_resource_only_shared_locked(resource=resource) and self.get_access_type(resource=resource, transaction_number=transaction_number) == 'shared'):
+                    transaction.add_shared_lock(resource = resource)
+                    t_string = "Lock-S" + transaction_number + "(" + resource + ")"
+                    self.final_schedule.append(t_string)
+                    t_string = "R" + transaction_number + "(" + resource + ")"
+                    self.final_schedule.append(t_string)
+                    print(f"Transaction {transaction_number} read {resource}")
+
+
+
                 else:
                     print(f"Transaction {transaction_number} still cant read on {resource} cos resource is not avail")
                     self.pending_transaction.add(transaction_number)
@@ -232,7 +243,7 @@ class Schedule:
                                 t.operation_queue.pop(0)
                                 self.previous_operation_queue = self.operation_queue
                                 self.operation_queue.remove(o)
-                            elif(self.is_resource_free(resource= resource, transaction_number=transaction_number) or self.is_resource_only_shared_locked(resource=resource)):
+                            elif(self.is_resource_free(resource= resource, transaction_number=transaction_number) ):
                                 access_type = self.get_access_type(resource=resource, transaction_number=transaction_number)
                                 if(access_type == 'shared'):
                                     transaction.add_shared_lock(resource = resource)
@@ -248,6 +259,16 @@ class Schedule:
                                 t.operation_queue.pop(0)
                                 self.previous_operation_queue = self.operation_queue
                                 self.operation_queue.remove(o)
+                            elif(self.is_resource_only_shared_locked(resource=resource) and self.get_access_type(resource=resource, transaction_number=transaction_number) == 'exclusive'):
+                                print(f"Transaction {transaction_number} Cant get exclusive lock on {resource}")
+                                self.previous_operation_queue = self.operation_queue
+                                not_pending = False
+                            
+                            elif(self.is_resource_only_shared_locked(resource=resource) and self.get_access_type(resource=resource, transaction_number=transaction_number) == 'shared'):
+                                transaction.add_shared_lock(resource = resource)
+                                t_string = "Lock-S" + transaction_number + "(" + resource + ")"
+                                self.final_schedule.append(t_string)
+
                             else:
                                 print(f"Transaction {transaction_number} still cant read on {resource} cos resource is not avail")
                                 self.previous_operation_queue = self.operation_queue
